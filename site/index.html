@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tremo.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* Adicionado para alinhar verticalmente */
+            height: 100vh;
+            background-color: #f5f7fa; /* Fundo claro padrão */
+            font-family: 'Inter', sans-serif;
+            color: #2f3542; /* Cor padrão do texto */
+        }
+
+
+        header {
+            width: 100%; /* Para ocupar toda a largura */
+            background-color: #1e90ff; /* Cor de fundo do cabeçalho */
+            padding: 10px; /* Padding para o cabeçalho */
+            text-align: center; /* Centralizar o texto no cabeçalho */
+            color: white; /* Cor do texto no cabeçalho */
+            font-size: 1.5rem; /* Tamanho da fonte */
+            font-weight: bold; /* Negrito */
+            position: absolute; /* Para fixar o cabeçalho no topo */
+            top: 0; /* Colar no topo */
+            left: 0; /* Colar à esquerda */
+        }
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 40px;
+            width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #1e90ff; /* Azul moderno */
+            margin-bottom: 20px;
+        }
+
+        #vibrationValue {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f1f2f6; /* Fundo leve para o texto de vibração */
+        }
+
+        button {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            font-size: 2rem; /* Tamanho do ícone */
+            color: #1e90ff; /* Cor do ícone */
+            width: 50px; /* Largura do botão */
+            height: 50px; /* Altura do botão */
+            border-radius: 50%; /* Bordas arredondadas para ser completamente redondo */
+            display: flex; /* Para centralizar o ícone */
+            justify-content: center; /* Centraliza o ícone horizontalmente */
+            align-items: center; /* Centraliza o ícone verticalmente */
+        }
+
+        button:hover {
+            background-color: #3742fa; /* Efeito ao passar o mouse no ícone */
+        }
+
+        /* Tema escuro */
+        .dark-mode {
+            background-color: #2f3542; /* Fundo escuro */
+            color: #f1f2f6; /* Cor do texto no tema escuro */
+        }
+
+        .dark-mode .container {
+            background-color: #57606f; /* Fundo da caixa no tema escuro */
+        }
+
+        .dark-mode h1 {
+            color: #ffa502; /* Título em laranja no tema escuro */
+        }
+
+        .dark-mode button:hover {
+            background-color: #ff7f50; /* Cor do botão no hover no tema escuro */
+        }
+
+        /* Responsividade para telas menores */
+        @media (max-width: 480px) {
+            .container {
+                width: 90%;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        #vibrationCount {
+            margin-top: 21.5px; /* Espaço acima do contador */
+            font-size: 1.5rem; /* Tamanho da fonte do contador */
+            font-weight: bold; /* Negrito para o contador */
+            color: #1e90ff; /* Cor do contador */
+        }
+
+   
+    </style>
+</head>
+
+<body>
+    <header>
+        tremo.
+    </header>
+    <div class="container">
+        <h1>Monitor de Vibrações</h1>
+        <div id="vibrationValue" class="loading">Carregando dados...</div>
+        <div id="vibrationCount">Vibrações Detectadas: 0</div> <!-- Contador de vibrações -->
+
+    </div>
+    <button id="themeToggle">🌙</button>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBOLLg4_3pJf_kdywsQ_PeEQtphSOt446I",
+          authDomain: "tremodata-9c44b.firebaseapp.com",
+          databaseURL: "https://tremodata-9c44b-default-rtdb.firebaseio.com",
+          projectId: "tremodata-9c44b",
+          storageBucket: "tremodata-9c44b.appspot.com",
+          messagingSenderId: "605714835085",
+          appId: "1:605714835085:web:4ef6b22f211f91b1fba4c4",
+          measurementId: "G-WDGZR2W2T3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        import {get, onValue, set, getDatabase, ref, update, remove, child} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+
+        const db = getDatabase();
+        let vibrationValue = document.getElementById('vibrationValue');
+        const themeToggle = document.getElementById('themeToggle');
+        let darkMode = false; // Inicialmente em modo claro
+
+        let vibrationCount = document.getElementById('vibrationCount'); // Elemento do contador
+        let count = 0; // Contador de vibrações
+
+
+        function readData(){
+            const dbRef = ref(db, 'vibration/');
+            onValue(dbRef, (snapshot) => {
+                const vibration = snapshot.val();
+
+                // Alterar o texto com base no valor lido
+                if (vibration === 1) {
+                    vibrationValue.innerText = "Vibrações Detectadas";
+                    vibrationValue.style.backgroundColor = "#ff4757"; // Cor de alerta para vibração
+                    vibrationValue.style.color = "white";
+
+                    count++; // Incrementa o contador
+                    vibrationCount.innerText = `Vibrações Detectadas: ${count}`; // Atualiza o contador na interface
+
+                } else if (vibration === 0) {
+                    vibrationValue.innerText = "Nenhuma Vibração Detectada";
+                    vibrationValue.style.backgroundColor = "#2ed573"; // Cor verde para estado normal
+                    vibrationValue.style.color = "white";
+                } else {
+                    vibrationValue.innerText = `Valor desconhecido: ${vibration}`;
+                    vibrationValue.style.backgroundColor = "#f1f2f6"; // Fundo neutro para valores desconhecidos
+                    vibrationValue.style.color = "#2f3542";
+                }
+            }, (error) => {
+                console.error("Erro ao ler dados:", error);
+                alert("Erro ao buscar dados");
+            });
+        }
+
+        themeToggle.addEventListener('click', () => {
+            darkMode = !darkMode; // Inverter o estado do tema
+            if (darkMode) {
+                document.body.classList.add('dark-mode');
+                themeToggle.innerText = '☀️'; // Ícone de sol no tema escuro
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeToggle.innerText = '🌙'; // Ícone de lua no tema claro
+            }
+        });
+
+        readData();
+    </script>
+</body>
+</html>
